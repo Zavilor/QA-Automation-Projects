@@ -1,0 +1,5 @@
+Log in tests results: 
+Valid credentials test passed
+Log out test passed
+Wrong credentials test passed
+Empty test credentials passed
