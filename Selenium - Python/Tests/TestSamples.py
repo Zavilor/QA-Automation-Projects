@@ -12,11 +12,26 @@ logs_directory = os.path.join(current_directory, "..", "Logs")
 if not os.path.exists(logs_directory):
     os.makedirs(logs_directory)
 
+# Manejo de logs, inicializo la clase Tee para poder imprimir tanto por consola como en los logs
+
+class Tee(object):
+    def __init__(self, *files):
+        self.files = files
+
+    def write(self, obj):
+        for f in self.files:
+            f.write(obj)
+            f.flush()  # Puede ayudar a garantizar que se imprima en tiempo real
+
+    def flush(self):
+        for f in self.files:
+            f.flush()
+
 log_file_path = os.path.join(logs_directory, "selenium_log.txt")
 log_file = open(log_file_path, "w")
 
-sys.stdout = log_file
-sys.stderr = log_file
+sys.stdout = Tee(sys.stdout, log_file)
+sys.stderr = Tee(sys.stderr, log_file)
 
 # Locators
 LOGIN_LINK = (By.LINK_TEXT, "Log in")
@@ -35,17 +50,15 @@ VALID_PASSWORD = "password"
 # Invalid credentials
 INVALID_CREDENTIALS = "invaaaaaaalid"
 
-# Setting up the browser
-driver = webdriver.Chrome()
-
-def handle_alert(expected_message):
+def handle_alert(driver, expected_message):
     WebDriverWait(driver, 10).until(EC.alert_is_present())
     alert = driver.switch_to.alert
     actual_message = alert.text
     alert.accept()  # Close alert
     return actual_message == expected_message
-def login_tests():
 
+def login_tests():
+    driver = webdriver.Chrome()  # Create a new instance of the browser for login tests
     try:
         # Test 1: Check if the given valid credentials work
         driver.get("https://www.demoblaze.com/")
@@ -71,7 +84,7 @@ def login_tests():
         if login_button.is_displayed():
             print("Log out test passed")
         else:
-            print("Log out test passed")
+            print("Log out test failed")
 
         # Test 3: Check if the given wrong credentials work
         driver.get("https://www.demoblaze.com/")
@@ -81,7 +94,7 @@ def login_tests():
         driver.find_element(*PASSWORD_INPUT).send_keys(INVALID_CREDENTIALS)
         driver.find_element(*LOGIN_BUTTON).click()
 
-        if handle_alert("User does not exist."):
+        if handle_alert(driver, "User does not exist."):
             print("Wrong credentials test passed")
         else:
             print("Wrong credentials test failed")
@@ -92,7 +105,7 @@ def login_tests():
         login_button.click()
         WebDriverWait(driver, 10).until(EC.visibility_of_element_located(LOGIN_BUTTON)).click()
 
-        if handle_alert("Please fill out Username and Password."):
+        if handle_alert(driver, "Please fill out Username and Password."):
             print("Empty test credentials passed")
         else:
             print("Empty credentials test failed")
@@ -102,11 +115,10 @@ def login_tests():
 
     finally:
         # Close the browser
-        # time.sleep(5)
         driver.quit()
 
 def sign_in_tests():
-
+    driver = webdriver.Chrome()  # Create a new instance of the browser for sign-in tests
     def generate_unique_username():
         # Create an username
         prefix = "user"
@@ -127,7 +139,7 @@ def sign_in_tests():
         driver.find_element(*SIGNUP_BUTTON).click()
         print("Mi username es: " + username)
 
-        if handle_alert("Sign up successful."):
+        if handle_alert(driver, "Sign up successful."):
             print("Sign up flow test passed")
         else:
             print("Sign up flow test failed")
@@ -139,7 +151,7 @@ def sign_in_tests():
 
         WebDriverWait(driver, 10).until(EC.element_to_be_clickable(SIGNUP_BUTTON)).click()
 
-        if handle_alert("Please fill out Username and Password."):
+        if handle_alert(driver, "Please fill out Username and Password."):
             print("Sign up form, empty fields test passed")
         else:
             print("Sign up form, empty fields test failed")
@@ -153,18 +165,17 @@ def sign_in_tests():
         WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "sign-password"))).send_keys(VALID_PASSWORD)
         driver.find_element(*SIGNUP_BUTTON).click()
 
-        if handle_alert("This user already exist."):
+        if handle_alert(driver, "This user already exist."):
             print("Creating existing user test passed")
         else:
             print("Creating existing user test failed")
-
 
     except Exception as e:
         print("An error occurred:", e)
 
     finally:
         # Close the browser
-        log_file.close()
+        #log_file.close()
         driver.quit()
 
 # Run the login_test
